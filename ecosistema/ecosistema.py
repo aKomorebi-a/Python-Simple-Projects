@@ -18,11 +18,9 @@ import random
 
 
 class Plant:
-    # planta_vida = 5
-    reproduccion: bool = False
 
     def __init__(self, name: str, tipo: str):
-        posible_ciclo: int = [5, 10, 15, 20, 25, 26, 28]
+        posible_ciclo: int = [5, 8, 10, 12, 15]
         planta_vida: int = random.choice(posible_ciclo)
         self.name = name
         self.tipo = tipo
@@ -34,28 +32,72 @@ class Plant:
     def fotosintesis(self, clima):
         fotosintesis = 0
         if clima == "soleado":
-            fotosintesis += 100
-            if fotosintesis == 100 or fotosintesis >= 80:
+            x = random.randint(1, 10)
+            fotosintesis += 100 - x
+            if fotosintesis >= 100 or fotosintesis >= 80:
+                self.vida += 5
+                print(f"\n{self.name} hizo la fotosintesis")
+                print(f"vive {self.vida} semanas")
+            else:
+                self.vida -= 5
+                print(f"vive {self.vida} semanas")
+        if clima == "nublado":
+            x = random.randint(1, 20)
+            fotosintesis += 50 - x
+            if fotosintesis >= 50 or fotosintesis >= 40:
                 self.vida += 2
                 print(f"\n{self.name} hizo la fotosintesis")
                 print(f"vive {self.vida} semanas")
-        if clima == "nublado":
-            fotosintesis += 50
-            if fotosintesis == 50 or fotosintesis >= 45:
+            else:
+                self.vida -= 5
+                print(f"vive {self.vida} semanas")
+
+        if clima == "lluvioso":
+            x = random.randint(1, 30)
+            fotosintesis += 50 - x
+            if fotosintesis >= 50 or fotosintesis >= 40:
                 self.vida -= 1
                 print(f"\n{self.name} no logro hacer la fotosintesis")
                 print(f"vive {self.vida} semanas")
+            else:
+                self.vida -= 6
+                print(f"vive {self.vida} semanas")
+
         if clima == "tormenta":
-            fotosintesis += 30
+            x = random.randint(1, 25)
+            fotosintesis += 30 - x
             if fotosintesis == 30 or fotosintesis >= 25:
-                self.vida -= 3
-                print(f"\n{self.name} no logro hacer la fotosintesis")
+                self.vida -= 2
+                print(f"\n{self.name} no hizo la fotosintesis")
+                print(f"vive {self.vida} semanas")
+            else:
+                self.vida -= 10
+                print(f"vive {self.vida} semanas")
+
+        if clima == "nevado soleado":
+            x = random.randint(1, 15)
+            fotosintesis += 30 - x
+            if fotosintesis == 30 or fotosintesis >= 27:
+                self.vida += 1
+                print(f"\n{self.name} hizo la fotosintesis")
+                print(f"vive {self.vida} semanas")
+            else:
+                self.vida -= 5
+                print(f"vive {self.vida} semanas")
+
+        if clima == "nevado nuboso":
+            x = random.randint(1, 18)
+            fotosintesis += 20 - x
+            if fotosintesis == 20 or fotosintesis >= 10:
+                self.vida -= 10
+                print(f"\n{self.name} no hizo la fotosintesis")
+                print(f"vive {self.vida} semanas")
+            else:
+                self.vida -= 10
                 print(f"vive {self.vida} semanas")
 
 
 class Herbivoro:
-    reproduccion: bool = True
-    alimentacion: bool = True
 
     def __init__(self, name: str, tipoDeHerb: str):
         posible_ciclo: int = [10, 15, 20, 25, 30, 35]
@@ -70,7 +112,7 @@ class Herbivoro:
 
     def comer(self, plant):
 
-        if self.tipoDeHerb == "frugivoros" and plant == "fruta":
+        if self.tipoDeHerb.lower() == "frugivoros" and plant.lower() == "fruta":
             self.vida += 2
             print(f"{self.name} comio {plant}")
             print(f"vivira una {self.vida} semana mas")
@@ -88,28 +130,67 @@ class Herbivoro:
             print(f"Ahora vive {self.vida}")
 
 
-p1 = Plant("manzana", "fruta")
-h1 = Herbivoro("venado", "folivoros")
+class Carnivoros:
+    def __init__(self, name: str):
+        posible_ciclo = [10, 20, 30, 40, 50]
+        carnivoro_vida = random.choice(posible_ciclo)
 
-h1.comer(p1.tipo)
+        self.name = name
+        self.vida = carnivoro_vida
 
-ecosistema = [
-    [0, 0, 0,],
-    [0, 0, 0,],
-    [0, 0, 0,]
-]
+    def __str__(self):
+        return f"El carnivoro se llama {self.name}"
 
 
-for i in range(1, 20):
-    ciclos = i
-    climas = ["soleado", "nublado", "tormenta"]
-    clima = random.choice(climas)
-    if ciclos <= p1.vida:
-        print(f"\n{p1.name} sigue viva")
-        print(f"\nEl clima es {clima}")
-        p1.fotosintesis(clima)
-        print(f"espectativa de vida de la {p1.name}, {p1.vida} semanas")
-        print(f"ha pasado {ciclos} semana")
+def ecosistema_weather(estacion):
+    primavera: str = ['soleado', 'soleado', 'nublado', 'lluvioso']
+    verano: str = ['soleado']
+    otoño: str = ['nublado', 'lluvioso', 'nublado', 'nublado', 'tormenta']
+    invierno: str = ['nevado nuboso', 'nevado soleado',
+                     'nevado nuboso', 'nevado soleado']
+
+    if estacion.lower() == 'primavera':
+        return random.choice(primavera)
+    elif estacion.lower() == 'verano':
+        return random.choice(verano)
+    elif estacion.lower() == 'otoño':
+        return random.choice(otoño)
+    elif estacion.lower() == 'invierno':
+        return random.choice(invierno)
     else:
-        print(f"\nse murio la {p1.name}")
-        print(f"ha pasado {ciclos} semana")
+        return None
+
+
+def ecosis() -> list:
+    eco = [
+        ['1', '2', '3', '4'],
+        ['5', '6', '7', '8']
+    ]
+    return eco
+
+
+p1 = Plant("manzana", "planta")
+h1 = Herbivoro("venado", "folivoros")
+c1 = Carnivoros("tigre")
+
+
+def interaccionesComer(plant, herb) -> str:
+    if plant.tipo == "fruta" and herb.tipoDeHerb == "folivoros":
+        plant.vida - plant.vida
+        print("La planta fue comida")
+    else:
+        print(f"{herb.name} no quiso comerse la {plant.name}")
+
+# for i in range(1, 20):
+#     ciclos = i
+#     estaciones = ["primavera", "verano", "otoño", "invierno"]
+#     clima = ecosistema_weather(random.choice(estaciones))
+#     if ciclos <= p1.vida:
+#         print(f"\n{p1.name} sigue viva")
+#         print(f"\nEl clima es {clima}")
+#         p1.fotosintesis(clima)
+#         print(f"espectativa de vida de la {p1.name}, {p1.vida} semanas")
+#         print(f"ha pasado {ciclos} semana")
+#     else:
+#         print(f"\nse murio la {p1.name}")
+#         print(f"ha pasado {ciclos} semana")
