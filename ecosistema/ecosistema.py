@@ -1,196 +1,382 @@
-# Crea un simulador simple de un ecosistema donde diferentes especies de animales y plantas interactúan entre sí a lo largo del tiempo.
-# El programa debería incluir:
-
-# Diferentes tipos de organismos (herbívoros, carnívoros, plantas)
-# Un sistema de reproducción y ciclo de vida para cada especie
-# Interacciones entre especies (alimentación, competencia por recursos)
-# Condiciones ambientales variables (clima, estaciones) que afecten al ecosistema
-# Visualización del estado del ecosistema en cada ciclo (puede ser simplemente texto)
-# Estadísticas que muestren la evolución de las poblaciones
-
-# Frugívoros. Aquellos que se alimentan principalmente de frutas, ya sea constantemente (generalmente en el trópico) o de manera estacional (en las latitudes templadas).
-# Folívoros. Aquellos que se alimentan de las hojas y tallos de las plantas, a menudo con la ayuda de bacterias simbióticas que les permiten absorber los nutrientes y descomponer la abundante celulosa.
-# Xilófagos. Aquellos que se alimentan de madera, en su gran mayoría artrópodos.
-# Granívoros. Aquellos que se alimentan de semillas o granos.
-# Rizófagos. Aquellos que se alimentan de raíces.
-
 import random
+from typing import List, Tuple
+import time
+import os
+
+# Definición de la clase base Objeto
 
 
-class Plant:
+class Objeto:
+    def __init__(self, nombre: str, simbolo: str):
+        self.nombre = nombre
+        self.simbolo = simbolo  # Representación visual del objeto
+        self.energia = 100      # Todos los objetos comienzan con 100 de energía
 
-    def __init__(self, name: str, tipo: str):
-        posible_ciclo: int = [5, 8, 10, 12, 15]
-        planta_vida: int = random.choice(posible_ciclo)
-        self.name = name
-        self.tipo = tipo
-        self.vida = planta_vida
+    def interactuar(self, otro_objeto, posicion: Tuple[int, int], otra_posicion: Tuple[int, int]) -> str:
+        """Método base para la interacción entre objetos"""
+        return f"No hay interacción definida entre {self.nombre} y {otro_objeto.nombre}"
 
-    def __str__(self):
-        return f" Esta planta es una: {self.name}"
+    def __str__(self) -> str:
+        return self.simbolo
 
-    def fotosintesis(self, clima):
-        fotosintesis = 0
-        if clima == "soleado":
-            x = random.randint(1, 10)
-            fotosintesis += 100 - x
-            if fotosintesis >= 100 or fotosintesis >= 80:
-                self.vida += 5
-                print(f"\n{self.name} hizo la fotosintesis")
-                print(f"vive {self.vida} semanas")
+    def estado_detallado(self) -> str:
+        """Devuelve una representación detallada del estado del objeto"""
+        return f"{self.nombre} ({self.simbolo}) - Energía: {self.energia}"
+
+# Definición de tipos específicos de objetos
+
+
+class Planta(Objeto):
+    def __init__(self):
+        super().__init__("Planta", "🌱")
+        self.edad = 0
+
+    def interactuar(self, otro_objeto, posicion: Tuple[int, int], otra_posicion: Tuple[int, int]) -> str:
+        if isinstance(otro_objeto, Sol):
+            self.energia += 20
+            return f"La planta absorbe energía del sol y crece (+20 energía)"
+        elif isinstance(otro_objeto, Agua):
+            self.energia += 15
+            return f"La planta absorbe agua y se fortalece (+15 energía)"
+        elif isinstance(otro_objeto, Animal):
+            self.energia -= 30
+            if self.energia <= 0:
+                return f"La planta ha sido consumida por un animal y muere (-30 energía)"
+            return f"La planta ha sido parcialmente consumida por un animal (-30 energía)"
+        return super().interactuar(otro_objeto, posicion, otra_posicion)
+
+    def estado_detallado(self) -> str:
+        return f"{super().estado_detallado()} - Edad: {self.edad} días"
+
+
+class Animal(Objeto):
+    def __init__(self):
+        super().__init__("Animal", "🐾")
+        self.hambre = 50
+
+    def interactuar(self, otro_objeto, posicion: Tuple[int, int], otra_posicion: Tuple[int, int]) -> str:
+        if isinstance(otro_objeto, Planta):
+            self.energia += 20
+            self.hambre -= 30
+            if self.hambre < 0:
+                self.hambre = 0
+            return f"El animal se alimenta de la planta (+20 energía, -30 hambre)"
+        elif isinstance(otro_objeto, Agua):
+            self.energia += 10
+            return f"El animal bebe agua y recupera energía (+10 energía)"
+        elif isinstance(otro_objeto, Animal):
+            # Los animales pueden competir o cooperar
+            if random.random() < 0.5:  # 50% probabilidad de competir
+                self.energia -= 15
+                otro_objeto.energia -= 15
+                return f"Los animales compiten por recursos (-15 energía cada uno)"
+            else:  # 50% probabilidad de cooperar
+                self.energia += 5
+                otro_objeto.energia += 5
+                return f"Los animales cooperan en la búsqueda de alimento (+5 energía cada uno)"
+        return super().interactuar(otro_objeto, posicion, otra_posicion)
+
+    def estado_detallado(self) -> str:
+        return f"{super().estado_detallado()} - Hambre: {self.hambre}"
+
+
+class Agua(Objeto):
+    def __init__(self):
+        super().__init__("Agua", "💧")
+        self.pureza = 100
+
+    def interactuar(self, otro_objeto, posicion: Tuple[int, int], otra_posicion: Tuple[int, int]) -> str:
+        if isinstance(otro_objeto, Sol):
+            self.energia -= 10  # El agua se evapora
+            if self.energia <= 0:
+                return f"El agua se ha evaporado completamente debido al sol (-10 energía)"
+            return f"El agua se evapora parcialmente debido al sol (-10 energía)"
+        elif isinstance(otro_objeto, Contaminante):
+            self.pureza -= 20
+            self.energia -= 15
+            if self.pureza <= 0:
+                return f"El agua ha sido completamente contaminada (-20 pureza, -15 energía)"
+            return f"El agua es contaminada parcialmente (-20 pureza, -15 energía)"
+        return super().interactuar(otro_objeto, posicion, otra_posicion)
+
+    def estado_detallado(self) -> str:
+        return f"{super().estado_detallado()} - Pureza: {self.pureza}%"
+
+
+class Sol(Objeto):
+    def __init__(self):
+        super().__init__("Sol", "☀️")
+        self.intensidad = random.randint(70, 100)
+
+    def interactuar(self, otro_objeto, posicion: Tuple[int, int], otra_posicion: Tuple[int, int]) -> str:
+        if isinstance(otro_objeto, Planta):
+            otro_objeto.energia += self.intensidad // 5
+            return f"El sol proporciona energía a la planta (+{self.intensidad // 5} energía)"
+        elif isinstance(otro_objeto, Agua):
+            otro_objeto.energia -= self.intensidad // 10
+            return f"El sol evapora parcialmente el agua (-{self.intensidad // 10} energía)"
+        return super().interactuar(otro_objeto, posicion, otra_posicion)
+
+    def estado_detallado(self) -> str:
+        return f"{super().estado_detallado()} - Intensidad: {self.intensidad}%"
+
+
+class Contaminante(Objeto):
+    def __init__(self):
+        super().__init__("Contaminante", "🏭")
+        self.toxicidad = random.randint(50, 100)
+
+    def interactuar(self, otro_objeto, posicion: Tuple[int, int], otra_posicion: Tuple[int, int]) -> str:
+        if isinstance(otro_objeto, Planta):
+            otro_objeto.energia -= self.toxicidad // 5
+            if otro_objeto.energia <= 0:
+                return f"La planta ha muerto debido a la contaminación (-{self.toxicidad // 5} energía)"
+            return f"La planta sufre por la contaminación (-{self.toxicidad // 5} energía)"
+        elif isinstance(otro_objeto, Agua):
+            otro_objeto.pureza -= self.toxicidad // 4
+            if otro_objeto.pureza <= 0:
+                return f"El agua ha sido completamente contaminada (-{self.toxicidad // 4} pureza)"
+            return f"El agua es contaminada (-{self.toxicidad // 4} pureza)"
+        elif isinstance(otro_objeto, Animal):
+            otro_objeto.energia -= self.toxicidad // 7
+            if otro_objeto.energia <= 0:
+                return f"El animal ha muerto debido a la contaminación (-{self.toxicidad // 7} energía)"
+            return f"El animal sufre por la contaminación (-{self.toxicidad // 7} energía)"
+        return super().interactuar(otro_objeto, posicion, otra_posicion)
+
+    def estado_detallado(self) -> str:
+        return f"{super().estado_detallado()} - Toxicidad: {self.toxicidad}%"
+
+# Clase principal para la simulación
+
+
+class Simulacion:
+    def __init__(self, filas: int, columnas: int):
+        self.filas = filas
+        self.columnas = columnas
+        self.grid = [[None for _ in range(columnas)] for _ in range(filas)]
+        self.dia_actual = 0
+        self.historico = []  # Para almacenar el histórico de eventos
+
+        # Inicializar el grid con objetos aleatorios
+        self.inicializar_grid()
+
+    def inicializar_grid(self):
+        """Inicializa el grid con objetos aleatorios"""
+        tipos_objeto = [Planta, Animal, Agua, Sol, Contaminante]
+        # Probabilidades para cada tipo
+        probabilidades = [0.3, 0.2, 0.2, 0.15, 0.15]
+
+        for i in range(self.filas):
+            for j in range(self.columnas):
+                # Decidir si crear un objeto o dejar vacío (20% probabilidad de vacío)
+                if random.random() < 0.8:
+                    tipo_objeto = random.choices(
+                        tipos_objeto, probabilidades)[0]
+                    self.grid[i][j] = tipo_objeto()
+
+    def obtener_vecinos(self, fila: int, columna: int) -> List[Tuple[Objeto, Tuple[int, int]]]:
+        """Obtiene los vecinos de una posición dada (arriba, abajo, izquierda, derecha)"""
+        vecinos = []
+        # Arriba, abajo, izquierda, derecha
+        direcciones = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+        for df, dc in direcciones:
+            nueva_fila, nueva_columna = fila + df, columna + dc
+
+            # Verificar si está dentro de los límites
+            if 0 <= nueva_fila < self.filas and 0 <= nueva_columna < self.columnas:
+                # Verificar que haya un objeto en esa posición
+                if self.grid[nueva_fila][nueva_columna] is not None:
+                    vecinos.append(
+                        (self.grid[nueva_fila][nueva_columna], (nueva_fila, nueva_columna)))
+
+        return vecinos
+
+    def simular_dia(self) -> List[str]:
+        """Simula un día de interacciones entre los objetos"""
+        self.dia_actual += 1
+        eventos = []
+
+        # Copia temporal del grid para actualizar sin afectar las interacciones
+        nuevo_grid = [[self.grid[i][j]
+                       for j in range(self.columnas)] for i in range(self.filas)]
+
+        # Para cada posición en el grid
+        for i in range(self.filas):
+            for j in range(self.columnas):
+                objeto_actual = self.grid[i][j]
+
+                # Si hay un objeto en esta posición
+                if objeto_actual is not None:
+                    # Envejecimiento y procesos naturales
+                    if isinstance(objeto_actual, Planta):
+                        objeto_actual.edad += 1
+                        # Las plantas ganan energía naturalmente con el tiempo
+                        objeto_actual.energia += 5
+                        eventos.append(
+                            f"Posición ({i},{j}): La planta crece y gana energía (+5)")
+
+                    elif isinstance(objeto_actual, Animal):
+                        # Los animales pierden energía y aumentan su hambre con el tiempo
+                        objeto_actual.energia -= 5
+                        objeto_actual.hambre += 10
+                        eventos.append(
+                            f"Posición ({i},{j}): El animal pierde energía y aumenta su hambre (-5 energía, +10 hambre)")
+
+                        # Si el animal tiene mucha hambre, pierde más energía
+                        if objeto_actual.hambre > 80:
+                            objeto_actual.energia -= 10
+                            eventos.append(
+                                f"Posición ({i},{j}): El animal está muy hambriento y pierde energía extra (-10)")
+
+                    # Obtener vecinos
+                    vecinos = self.obtener_vecinos(i, j)
+
+                    # Si hay vecinos, interactuar con uno aleatorio
+                    if vecinos:
+                        vecino, pos_vecino = random.choice(vecinos)
+                        resultado = objeto_actual.interactuar(
+                            vecino, (i, j), pos_vecino)
+                        eventos.append(
+                            f"Posición ({i},{j}) -> ({pos_vecino[0]},{pos_vecino[1]}): {resultado}")
+
+                    # Verificar si el objeto debe ser eliminado (muerte)
+                    if objeto_actual.energia <= 0:
+                        nuevo_grid[i][j] = None
+                        eventos.append(
+                            f"Posición ({i},{j}): {objeto_actual.nombre} ha muerto o desaparecido")
+
+        # Actualizar el grid
+        self.grid = nuevo_grid
+
+        # Eventos de generación aleatoria (nacimientos, clima, etc.)
+        self.eventos_aleatorios(eventos)
+
+        return eventos
+
+    def eventos_aleatorios(self, eventos: List[str]):
+        """Genera eventos aleatorios como nacimientos, cambios climáticos, etc."""
+        # Probabilidad del 10% de que nazca una nueva planta en un espacio vacío
+        if random.random() < 0.1:
+            espacios_vacios = [(i, j) for i in range(self.filas)
+                               for j in range(self.columnas) if self.grid[i][j] is None]
+            if espacios_vacios:
+                i, j = random.choice(espacios_vacios)
+                self.grid[i][j] = Planta()
+                eventos.append(
+                    f"Posición ({i},{j}): Ha nacido una nueva planta")
+
+        # Probabilidad del 5% de que haya una lluvia que beneficie a todas las plantas y aguas
+        if random.random() < 0.05:
+            eventos.append(
+                "¡Ha comenzado a llover! Todas las plantas ganan energía y el agua aumenta su pureza")
+            for i in range(self.filas):
+                for j in range(self.columnas):
+                    if self.grid[i][j] is not None:
+                        if isinstance(self.grid[i][j], Planta):
+                            self.grid[i][j].energia += 15
+                        elif isinstance(self.grid[i][j], Agua):
+                            self.grid[i][j].pureza += 10
+                            if self.grid[i][j].pureza > 100:
+                                self.grid[i][j].pureza = 100
+
+    def mostrar_grid(self):
+        """Muestra el estado actual del grid"""
+        print(f"\n=== Día {self.dia_actual} ===")
+
+        # Imprimir encabezado de columnas
+        print("  ", end="")
+        for j in range(self.columnas):
+            print(f" {j} ", end="")
+        print()
+
+        for i in range(self.filas):
+            print(f"{i} ", end="")
+            for j in range(self.columnas):
+                if self.grid[i][j] is None:
+                    print(" · ", end="")
+                else:
+                    print(f" {self.grid[i][j]} ", end="")
+            print()
+
+    def mostrar_estadisticas(self):
+        """Muestra estadísticas sobre los objetos en el grid"""
+        tipos = {
+            "Planta": 0,
+            "Animal": 0,
+            "Agua": 0,
+            "Sol": 0,
+            "Contaminante": 0
+        }
+
+        # Contar objetos por tipo
+        for i in range(self.filas):
+            for j in range(self.columnas):
+                if self.grid[i][j] is not None:
+                    tipos[self.grid[i][j].nombre] += 1
+
+        print("\n=== Estadísticas ===")
+        for tipo, cantidad in tipos.items():
+            print(f"{tipo}: {cantidad}")
+
+        # Calcular porcentaje de ocupación
+        total_celdas = self.filas * self.columnas
+        celdas_ocupadas = sum(tipos.values())
+        porcentaje_ocupacion = (celdas_ocupadas / total_celdas) * 100
+        print(
+            f"Ocupación: {celdas_ocupadas}/{total_celdas} ({porcentaje_ocupacion:.2f}%)")
+
+    def mostrar_detalles_objeto(self, fila: int, columna: int):
+        """Muestra detalles de un objeto específico"""
+        if 0 <= fila < self.filas and 0 <= columna < self.columnas:
+            objeto = self.grid[fila][columna]
+            if objeto is not None:
+                print(f"\nDetalles del objeto en ({fila},{columna}):")
+                print(objeto.estado_detallado())
             else:
-                self.vida -= 5
-                print(f"vive {self.vida} semanas")
-        if clima == "nublado":
-            x = random.randint(1, 20)
-            fotosintesis += 50 - x
-            if fotosintesis >= 50 or fotosintesis >= 40:
-                self.vida += 2
-                print(f"\n{self.name} hizo la fotosintesis")
-                print(f"vive {self.vida} semanas")
-            else:
-                self.vida -= 5
-                print(f"vive {self.vida} semanas")
-
-        if clima == "lluvioso":
-            x = random.randint(1, 30)
-            fotosintesis += 50 - x
-            if fotosintesis >= 50 or fotosintesis >= 40:
-                self.vida -= 1
-                print(f"\n{self.name} no logro hacer la fotosintesis")
-                print(f"vive {self.vida} semanas")
-            else:
-                self.vida -= 6
-                print(f"vive {self.vida} semanas")
-
-        if clima == "tormenta":
-            x = random.randint(1, 25)
-            fotosintesis += 30 - x
-            if fotosintesis == 30 or fotosintesis >= 25:
-                self.vida -= 2
-                print(f"\n{self.name} no hizo la fotosintesis")
-                print(f"vive {self.vida} semanas")
-            else:
-                self.vida -= 10
-                print(f"vive {self.vida} semanas")
-
-        if clima == "nevado soleado":
-            x = random.randint(1, 15)
-            fotosintesis += 30 - x
-            if fotosintesis == 30 or fotosintesis >= 27:
-                self.vida += 1
-                print(f"\n{self.name} hizo la fotosintesis")
-                print(f"vive {self.vida} semanas")
-            else:
-                self.vida -= 5
-                print(f"vive {self.vida} semanas")
-
-        if clima == "nevado nuboso":
-            x = random.randint(1, 18)
-            fotosintesis += 20 - x
-            if fotosintesis == 20 or fotosintesis >= 10:
-                self.vida -= 10
-                print(f"\n{self.name} no hizo la fotosintesis")
-                print(f"vive {self.vida} semanas")
-            else:
-                self.vida -= 10
-                print(f"vive {self.vida} semanas")
-
-
-class Herbivoro:
-
-    def __init__(self, name: str, tipoDeHerb: str):
-        posible_ciclo: int = [10, 15, 20, 25, 30, 35]
-        herbivoro_vida: int = random.choice(posible_ciclo)
-
-        self.name = name
-        self.tipoDeHerb = tipoDeHerb
-        self.vida = herbivoro_vida
-
-    def __str__(self):
-        return f"Se llama {self.name} y es un herbivoro de tipo: {self.tipoDeHerb}"
-
-    def comer(self, plant):
-
-        if self.tipoDeHerb.lower() == "frugivoros" and plant.lower() == "fruta":
-            self.vida += 2
-            print(f"{self.name} comio {plant}")
-            print(f"vivira una {self.vida} semana mas")
-        elif self.tipoDeHerb == "folivoros" and plant == "planta":
-            self.vida += 2
-            print(f"{self.name} comio {plant}")
-            print(f"vivira una {self.vida} semana mas")
-        elif self.tipoDeHerb == "rizofagos" and plant == "raiz":
-            self.vida += 2
-            print(f"{self.name} comio {plant}")
-            print(f"vivira una {self.vida} semana mas")
+                print(f"\nNo hay objeto en la posición ({fila},{columna})")
         else:
-            print("no pudo comer")
-            self.vida -= 5
-            print(f"Ahora vive {self.vida}")
+            print("\nPosición fuera de los límites del grid")
+
+    def ejecutar_simulacion(self, dias: int, mostrar_eventos: bool = True, delay: float = 1.0):
+        """Ejecuta la simulación por un número determinado de días"""
+        print(f"Iniciando simulación para {dias} días...")
+        self.mostrar_grid()
+
+        for _ in range(dias):
+            # Limpiar la pantalla en sistemas Unix/Linux/MacOS
+            if os.name == 'posix':
+                os.system('clear')
+            # Limpiar la pantalla en Windows
+            else:
+                os.system('cls')
+
+            eventos = self.simular_dia()
+            self.mostrar_grid()
+            self.mostrar_estadisticas()
+
+            if mostrar_eventos:
+                print("\n=== Eventos ===")
+                for evento in eventos:
+                    print(evento)
+
+            # Esperar antes del siguiente día
+            time.sleep(delay)
+
+        print(f"\nSimulación completada. Transcurrieron {dias} días.")
 
 
-class Carnivoros:
-    def __init__(self, name: str):
-        posible_ciclo = [10, 20, 30, 40, 50]
-        carnivoro_vida = random.choice(posible_ciclo)
+# Ejemplo de uso
+if __name__ == "__main__":
+    # Crear una simulación con un grid de 6x8
+    sim = Simulacion(filas=6, columnas=8)
 
-        self.name = name
-        self.vida = carnivoro_vida
+    # Ejecutar la simulación por 10 días
+    sim.ejecutar_simulacion(dias=2, mostrar_eventos=True, delay=2.0)
 
-    def __str__(self):
-        return f"El carnivoro se llama {self.name}"
-
-
-def ecosistema_weather(estacion):
-    primavera: str = ['soleado', 'soleado', 'nublado', 'lluvioso']
-    verano: str = ['soleado']
-    otoño: str = ['nublado', 'lluvioso', 'nublado', 'nublado', 'tormenta']
-    invierno: str = ['nevado nuboso', 'nevado soleado',
-                     'nevado nuboso', 'nevado soleado']
-
-    if estacion.lower() == 'primavera':
-        return random.choice(primavera)
-    elif estacion.lower() == 'verano':
-        return random.choice(verano)
-    elif estacion.lower() == 'otoño':
-        return random.choice(otoño)
-    elif estacion.lower() == 'invierno':
-        return random.choice(invierno)
-    else:
-        return None
-
-
-def ecosis() -> list:
-    eco = [
-        ['1', '2', '3', '4'],
-        ['5', '6', '7', '8']
-    ]
-    return eco
-
-
-p1 = Plant("manzana", "planta")
-h1 = Herbivoro("venado", "folivoros")
-c1 = Carnivoros("tigre")
-
-
-def interaccionesComer(plant, herb) -> str:
-    if plant.tipo == "fruta" and herb.tipoDeHerb == "folivoros":
-        plant.vida - plant.vida
-        print("La planta fue comida")
-    else:
-        print(f"{herb.name} no quiso comerse la {plant.name}")
-
-# for i in range(1, 20):
-#     ciclos = i
-#     estaciones = ["primavera", "verano", "otoño", "invierno"]
-#     clima = ecosistema_weather(random.choice(estaciones))
-#     if ciclos <= p1.vida:
-#         print(f"\n{p1.name} sigue viva")
-#         print(f"\nEl clima es {clima}")
-#         p1.fotosintesis(clima)
-#         print(f"espectativa de vida de la {p1.name}, {p1.vida} semanas")
-#         print(f"ha pasado {ciclos} semana")
-#     else:
-#         print(f"\nse murio la {p1.name}")
-#         print(f"ha pasado {ciclos} semana")
+    # También se puede obtener información detallada de un objeto específico
+    # print("\nConsulta de un objeto específico:")
+    # fila = int(input("Introduce la fila del objeto a consultar: "))
+    # columna = int(input("Introduce la columna del objeto a consultar: "))
+    # sim.mostrar_detalles_objeto(fila, columna)
