@@ -57,7 +57,7 @@ class ConvertMayus:
         mayus_entry.focus()
         main.bind("<Return>", self.convertir_mayuscula)
 
-    def convertir_mayuscula(self, *args) -> str:
+    def convertir_mayuscula(self, *args):
         try:
             palabra = self.mayus.get()
             x = palabra.upper()
